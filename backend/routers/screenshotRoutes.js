@@ -10,6 +10,8 @@ const {
   getScreenshot,
   deleteScreenshot,
   getScreenshotStats,
+  cleanupOldUploads,
+  cleanupAllUploads
 } = require('../controllers/screenshotController');
 
 const router = express.Router();
@@ -57,5 +59,9 @@ router.get('/', getAllScreenshots);
 router.get('/stats', getScreenshotStats);
 router.get('/:screenshotId', getScreenshot);
 router.delete('/:screenshotId', deleteScreenshot);
+
+// Cleanup routes
+router.post('/cleanup/old', cleanupOldUploads);
+router.post('/cleanup/all', cleanupAllUploads);
 
 module.exports = router;

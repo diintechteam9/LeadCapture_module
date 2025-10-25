@@ -16,6 +16,7 @@ import { API_BASE_URL } from '../config';
 import ScreenshotUpload from './ScreenshotUpload';
 import PhoneNumbersList from './PhoneNumbersList';
 import ExportData from './ExportData';
+import Stats from './Stats';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
@@ -33,6 +34,7 @@ const Dashboard = () => {
     }
   });
   const [loading, setLoading] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     fetchStats();
@@ -78,34 +80,44 @@ const Dashboard = () => {
   const tabs = [
     { id: 'upload', label: 'Upload Screenshot', icon: Upload },
     { id: 'phone-numbers', label: 'Phone Numbers', icon: Phone },
+    { id: 'stats', label: 'Stats', icon: BarChart3 },
     { id: 'export', label: 'Export Data', icon: Download }
   ];
 
   const StatCard = ({ title, value, icon: Icon, color, subtitle }) => (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+    <div className="bg-white rounded-lg shadow-md p-4 border border-gray-200">
       <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900">{value}</p>
+        <div className="flex-1">
+          <p className="text-sm font-medium text-gray-600 mb-1">{title}</p>
+          <p className="text-xl font-bold text-gray-900">{value}</p>
           {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
         </div>
-        <div className={`p-3 rounded-full ${color}`}>
-          <Icon className="h-6 w-6 text-white" />
+        <div className={`p-2 rounded-full ${color} shrink-0 ml-3`}>
+          <Icon className="h-5 w-5 text-white" />
         </div>
       </div>
     </div>
   );
 
+  const handleUploadSuccess = () => {
+    // Refresh stats
+    fetchStats();
+    // Force refresh of phone numbers list
+    setRefreshKey(prev => prev + 1);
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'upload':
-        return <ScreenshotUpload onUploadSuccess={fetchStats} />;
+        return <ScreenshotUpload onUploadSuccess={handleUploadSuccess} />;
       case 'phone-numbers':
-        return <PhoneNumbersList />;
+        return <PhoneNumbersList key={refreshKey} />;
+      case 'stats':
+        return <Stats />;
       case 'export':
         return <ExportData />;
       default:
-        return <ScreenshotUpload onUploadSuccess={fetchStats} />;
+        return <ScreenshotUpload onUploadSuccess={handleUploadSuccess} />;
     }
   };
 
@@ -127,7 +139,7 @@ const Dashboard = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Chrome Extension Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Capture Leads</h1>
               <p className="text-gray-600 mt-1">Manage screenshots and extracted phone numbers</p>
             </div>
             <div className="flex items-center space-x-2 text-sm text-gray-500">
@@ -138,39 +150,8 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <StatCard
-            title="Total Screenshots"
-            value={stats.screenshots.total}
-            icon={Camera}
-            color="bg-blue-500"
-            subtitle={`${stats.screenshots.processed} processed`}
-          />
-          <StatCard
-            title="Phone Numbers Found"
-            value={stats.phoneNumbers.total}
-            icon={Phone}
-            color="bg-green-500"
-            subtitle={`${stats.phoneNumbers.valid} valid`}
-          />
-          <StatCard
-            title="Processing Rate"
-            value={stats.screenshots.total > 0 ? Math.round((stats.screenshots.processed / stats.screenshots.total) * 100) : 0}
-            icon={TrendingUp}
-            color="bg-purple-500"
-            subtitle="% of screenshots processed"
-          />
-          <StatCard
-            title="Validity Rate"
-            value={stats.phoneNumbers.total > 0 ? Math.round((stats.phoneNumbers.valid / stats.phoneNumbers.total) * 100) : 0}
-            icon={CheckCircle}
-            color="bg-orange-500"
-            subtitle="% of valid numbers"
-          />
-        </div>
-
+      <div className="max-w-4xl mx-auto px-4 py-6">
+        
         {/* Navigation Tabs */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
           <div className="border-b border-gray-200">

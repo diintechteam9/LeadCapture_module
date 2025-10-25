@@ -34,7 +34,9 @@ const getAllPhoneNumbers = async (req, res) => {
     if (search) {
       query.$or = [
         { phoneNumber: { $regex: search, $options: 'i' } },
-        { context: { $regex: search, $options: 'i' } }
+        { context: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } }
       ];
     }
 
@@ -166,6 +168,27 @@ const deletePhoneNumber = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error deleting phone number',
+      error: error.message
+    });
+  }
+};
+
+// Delete all phone numbers
+const deleteAllPhoneNumbers = async (req, res) => {
+  try {
+    const result = await PhoneNumber.deleteMany({});
+    
+    res.json({
+      success: true,
+      message: `All phone numbers deleted successfully. ${result.deletedCount} phone numbers removed.`,
+      deletedCount: result.deletedCount
+    });
+
+  } catch (error) {
+    console.error('Delete all phone numbers error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error deleting all phone numbers',
       error: error.message
     });
   }
@@ -370,6 +393,7 @@ module.exports = {
   getPhoneNumber,
   updatePhoneNumber,
   deletePhoneNumber,
+  deleteAllPhoneNumbers,
   getPhoneNumberStats,
   exportToExcel,
   exportToCSV

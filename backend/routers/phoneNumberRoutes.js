@@ -4,6 +4,7 @@ const {
   getPhoneNumber,
   updatePhoneNumber,
   deletePhoneNumber,
+  deleteAllPhoneNumbers,
   getPhoneNumberStats,
   exportToExcel,
   exportToCSV
@@ -16,6 +17,7 @@ router.get('/', getAllPhoneNumbers);
 router.get('/stats', getPhoneNumberStats);
 router.get('/export/excel', exportToExcel);
 router.get('/export/csv', exportToCSV);
+router.delete('/delete-all', deleteAllPhoneNumbers);
 router.get('/:phoneNumberId', getPhoneNumber);
 router.put('/:phoneNumberId', updatePhoneNumber);
 router.delete('/:phoneNumberId', deletePhoneNumber);

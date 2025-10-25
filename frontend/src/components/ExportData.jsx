@@ -3,11 +3,7 @@ import {
   Download, 
   FileSpreadsheet, 
   FileText, 
-  Filter, 
   Calendar,
-  CheckCircle,
-  XCircle,
-  Globe,
   Settings
 } from 'lucide-react';
 import { API_BASE_URL } from '../config';
@@ -16,9 +12,6 @@ import toast from 'react-hot-toast';
 const ExportData = () => {
   const [exporting, setExporting] = useState(false);
   const [filters, setFilters] = useState({
-    isValid: '',
-    countryCode: '',
-    minConfidence: '',
     dateFrom: '',
     dateTo: ''
   });
@@ -103,9 +96,6 @@ const ExportData = () => {
 
   const clearFilters = () => {
     setFilters({
-      isValid: '',
-      countryCode: '',
-      minConfidence: '',
       dateFrom: '',
       dateTo: ''
     });
@@ -121,7 +111,7 @@ const ExportData = () => {
       </div>
 
       {/* Export Options */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="">
         {/* Excel Export */}
         <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
           <div className="flex items-center mb-4">
@@ -159,7 +149,7 @@ const ExportData = () => {
         </div>
 
         {/* CSV Export */}
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+        {/* <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
           <div className="flex items-center mb-4">
             <div className="p-3 bg-blue-100 rounded-full mr-4">
               <FileText className="h-6 w-6 text-blue-600" />
@@ -192,7 +182,7 @@ const ExportData = () => {
               </>
             )}
           </button>
-        </div>
+        </div> */}
       </div>
 
       {/* Export Filters */}
@@ -212,55 +202,7 @@ const ExportData = () => {
           )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* Validity Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Validity Status
-            </label>
-            <select
-              value={filters.isValid}
-              onChange={(e) => handleFilterChange('isValid', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">All Numbers</option>
-              <option value="true">Valid Only</option>
-              <option value="false">Invalid Only</option>
-            </select>
-          </div>
-
-          {/* Country Code Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Country Code
-            </label>
-            <select
-              value={filters.countryCode}
-              onChange={(e) => handleFilterChange('countryCode', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">All Numbers</option>
-              <option value="91">India (+91)</option>
-            </select>
-          </div>
-
-          {/* Confidence Filter */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Minimum Confidence
-            </label>
-            <select
-              value={filters.minConfidence}
-              onChange={(e) => handleFilterChange('minConfidence', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="">All Confidence Levels</option>
-              <option value="0.9">High (90%+)</option>
-              <option value="0.7">Medium (70%+)</option>
-              <option value="0.5">Low (50%+)</option>
-            </select>
-          </div>
-
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Date From Filter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -293,33 +235,6 @@ const ExportData = () => {
           <div className="mt-4 p-3 bg-blue-50 rounded-md">
             <p className="text-sm font-medium text-blue-900 mb-2">Active Filters:</p>
             <div className="flex flex-wrap gap-2">
-              {filters.isValid && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {filters.isValid === 'true' ? (
-                    <>
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Valid Only
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-3 w-3 mr-1" />
-                      Invalid Only
-                    </>
-                  )}
-                </span>
-              )}
-              {filters.countryCode && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  <Globe className="h-3 w-3 mr-1" />
-                  +{filters.countryCode}
-                </span>
-              )}
-              {filters.minConfidence && (
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  <Filter className="h-3 w-3 mr-1" />
-                  {Math.round(parseFloat(filters.minConfidence) * 100)}%+ Confidence
-                </span>
-              )}
               {filters.dateFrom && (
                 <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                   <Calendar className="h-3 w-3 mr-1" />
@@ -350,7 +265,7 @@ const ExportData = () => {
               <li>• Formatted columns and styling</li>
             </ul>
           </div>
-          <div>
+          {/* <div>
             <h4 className="font-medium text-gray-900 mb-2">CSV Export Includes:</h4>
             <ul className="space-y-1">
               <li>• All phone number data in CSV format</li>
@@ -358,7 +273,7 @@ const ExportData = () => {
               <li>• Confidence scores and validity status</li>
               <li>• Extraction timestamps</li>
             </ul>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>

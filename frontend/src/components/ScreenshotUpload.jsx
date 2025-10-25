@@ -9,6 +9,8 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
   const [processing, setProcessing] = useState(false);
   const [uploadedFile, setUploadedFile] = useState(null);
   const [screenshotId, setScreenshotId] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState('');
   const [formData, setFormData] = useState({
     url: '',
     title: ''
@@ -76,8 +78,8 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
     try {
       setUploading(true);
       setProcessing(true);
-      
-      toast.loading('Uploading screenshot...', { id: 'uploading' });
+      setProgress(0);
+      setProgressText('Uploading screenshot...');
       
       const uploadFormData = new FormData();
       uploadFormData.append('screenshot', uploadedFile);
@@ -95,24 +97,25 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
       }
       
       const response = await res.json();
+      const screenshotId = response.data.id;
       
-      toast.success('Screenshot uploaded successfully!', { id: 'uploading' });
+      setProgress(30);
+      setProgressText('Upload complete. Starting OCR...');
       
-      setScreenshotId(response.data.id);
-      
-      // Backend automatically processes with OCR
-      toast.success('OCR processing started in the background. Phone numbers will be extracted automatically.');
+      // Wait for OCR to complete and phone numbers to be saved
+      await waitForProcessing(screenshotId);
       
       // Reset form
       setUploadedFile(null);
       setScreenshotId(null);
-      setFormData({ url: '', title: '' });
+      setProgress(0);
+      setProgressText('');
       
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
 
-      // Call the success callback to refresh stats
+      // Call the success callback to refresh stats and phone numbers
       if (onUploadSuccess) {
         onUploadSuccess();
       }
@@ -120,10 +123,59 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(error.message || 'Failed to upload screenshot');
+      setProgress(0);
+      setProgressText('');
     } finally {
       setUploading(false);
       setProcessing(false);
     }
+  };
+
+  // Poll for OCR completion
+  const waitForProcessing = async (screenshotId) => {
+    const maxAttempts = 60; // 60 seconds max wait
+    let attempts = 0;
+    
+    setProgress(40);
+    setProgressText('Extracting text with OCR...');
+
+    while (attempts < maxAttempts) {
+      try {
+        // Check if screenshot is processed
+        const res = await fetch(`${API_BASE_URL}/api/screenshots/${screenshotId}`);
+        
+        if (res.ok) {
+          const data = await res.json();
+          const screenshot = data.data;
+          
+          if (screenshot.processed) {
+            setProgress(90);
+            setProgressText('Saving phone numbers to database...');
+            
+            // Wait a bit for phone numbers to be saved
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            setProgress(100);
+            setProgressText('Complete!');
+            
+            toast.success('Phone numbers extracted and saved!');
+            return;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking processing status:', error);
+      }
+      
+      attempts++;
+      // Update progress gradually
+      setProgress(40 + Math.floor((attempts / maxAttempts) * 40));
+      
+      // Wait 1 second before checking again
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    
+    // If timeout, still refresh
+    toast.success('Processing started. Phone numbers will appear shortly.');
   };
 
 
@@ -214,41 +266,21 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
         )}
       </div>
 
-      {/* Form Fields */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
-            Source URL (Optional)
-          </label>
-          <input
-            type="url"
-            id="url"
-            name="url"
-            value={formData.url}
-            onChange={handleInputChange}
-            placeholder="https://example.com"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            disabled={uploading || processing}
-          />
+      {/* Progress Bar */}
+      {processing && progress > 0 && (
+        <div className="bg-white p-4 rounded-lg border border-gray-200">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">{progressText}</span>
+            <span className="text-sm font-medium text-blue-600">{progress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-blue-600 h-3 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
         </div>
-        <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-            Page Title (Optional)
-          </label>
-          <input
-            type="text"
-            id="title"
-            name="title"
-            value={formData.title}
-            onChange={handleInputChange}
-            placeholder="Page title or description"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-            disabled={uploading || processing}
-          />
-        </div>
-      </div>
-
-
+      )}
 
       {/* Upload Button */}
       <div className="flex justify-center">

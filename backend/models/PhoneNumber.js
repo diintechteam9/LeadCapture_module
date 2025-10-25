@@ -47,6 +47,16 @@ const phoneNumberSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  name: {
+    type: String,
+    default: '',
+    trim: true
+  },
+  email: {
+    type: String,
+    default: '',
+    trim: true
+  },
   isValid: {
     type: Boolean,
     default: true

@@ -31,12 +31,14 @@ const PhoneNumbersList = () => {
   });
 
   useEffect(() => {
-    fetchPhoneNumbers();
+    fetchPhoneNumbers(true); // Show loading on initial load
   }, [pagination.currentPage, filters, searchTerm]);
 
-  const fetchPhoneNumbers = async () => {
+  const fetchPhoneNumbers = async (showLoading = false) => {
     try {
-      setLoading(true);
+      if (showLoading) {
+        setLoading(true);
+      }
       const params = {
         page: pagination.currentPage,
         limit: pagination.itemsPerPage,
@@ -61,7 +63,9 @@ const PhoneNumbersList = () => {
       console.error('Error fetching phone numbers:', error);
       toast.error('Failed to fetch phone numbers');
     } finally {
-      setLoading(false);
+      if (showLoading) {
+        setLoading(false);
+      }
     }
   };
 
@@ -137,6 +141,29 @@ const PhoneNumbersList = () => {
     }
   };
 
+  const handleDeleteAll = async () => {
+    if (!window.confirm('Are you sure you want to delete ALL phone numbers? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/phone-numbers/delete-all`, {
+        method: 'DELETE',
+      });
+      
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed to delete all phone numbers');
+      }
+      
+      toast.success('All phone numbers deleted successfully');
+      fetchPhoneNumbers();
+    } catch (error) {
+      console.error('Error deleting all phone numbers:', error);
+      toast.error('Failed to delete all phone numbers');
+    }
+  };
+
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -182,7 +209,7 @@ const PhoneNumbersList = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search phone numbers or context..."
+                placeholder="Search phone numbers, names, emails..."
                 value={searchTerm}
                 onChange={handleSearch}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
@@ -190,8 +217,20 @@ const PhoneNumbersList = () => {
             </div>
           </div>
 
+          {/* Delete All Button */}
+          <div className="flex items-center">
+            <button
+              onClick={handleDeleteAll}
+              disabled={phoneNumbers.length === 0}
+              className="flex items-center px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete All
+            </button>
+          </div>
+
           {/* Filters */}
-          <div className="flex flex-col md:flex-row gap-2">
+          {/* <div className="flex flex-col md:flex-row gap-2">
             <select
               value={filters.isValid}
               onChange={(e) => handleFilterChange('isValid', e.target.value)}
@@ -221,7 +260,7 @@ const PhoneNumbersList = () => {
               <option value="0.7">Medium (70%+)</option>
               <option value="0.5">Low (50%+)</option>
             </select>
-          </div>
+          </div> */}
         </div>
       </div>
 
@@ -235,18 +274,12 @@ const PhoneNumbersList = () => {
                   Phone Number
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Country
+                  Name
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Confidence
+                  Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-               
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
+              
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -265,44 +298,27 @@ const PhoneNumbersList = () => {
                         <div className="text-sm text-gray-500">
                           {phone.phoneNumber}
                         </div>
-                        <div className="text-xs text-blue-600">
+                        {/* <div className="text-xs text-blue-600">
                           Original: {phone.context?.substring(0, 50)}...
-                        </div>
+                        </div> */}
                       </div>
                     </div>
                   </td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <Globe className="h-4 w-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-900">
-                        {phone.countryCode ? `+${phone.countryCode}` : 'Unknown'}
-                      </span>
+                    <div className="text-sm text-gray-900">
+                      {phone.name || 'N/A'}
                     </div>
                   </td>
+                  
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getConfidenceColor(phone.confidence)}`}>
-                      {Math.round(phone.confidence * 100)}%
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {phone.isValid ? (
-                        <CheckCircle className="h-4 w-4 text-green-500 mr-1" />
-                      ) : (
-                        <XCircle className="h-4 w-4 text-red-500 mr-1" />
-                      )}
-                      <span className={`text-sm font-medium ${phone.isValid ? 'text-green-600' : 'text-red-600'}`}>
-                        {phone.isValid ? 'Valid' : 'Invalid'}
-                      </span>
+                    <div className="text-sm text-gray-900">
+                      {phone.email || 'N/A'}
                     </div>
                   </td>
-
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {formatDate(phone.createdAt)}
-                    </div>
-                  </td>
+                  
+                
+                 
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex space-x-2">
                       <button

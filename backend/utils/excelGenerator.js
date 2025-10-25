@@ -11,19 +11,10 @@ const generateExcelFile = (phoneNumbers, screenshots) => {
   
   // Prepare data for the main sheet
   const mainData = phoneNumbers.map(phone => {
-    const screenshot = screenshots.find(s => s._id.toString() === phone.screenshot.toString());
     return {
-      'Phone Number': phone.phoneNumber,
-      'Formatted Number': phone.formattedNumber,
-      'Country Code': phone.countryCode,
-      'Confidence': (phone.confidence * 100).toFixed(1) + '%',
-      'Valid': phone.isValid ? 'Yes' : 'No',
-      'Context': phone.context,
-      'Source URL': screenshot ? screenshot.url : 'N/A',
-      'Page Title': screenshot ? screenshot.title : 'N/A',
-      'Extracted Date': new Date(phone.createdAt).toLocaleDateString(),
-      'Position X': phone.position.x,
-      'Position Y': phone.position.y
+      'Phone Number': phone.formattedNumber,
+      'Name': phone.name || 'N/A',
+      'Email': phone.email || 'N/A',
     };
   });
   
@@ -32,17 +23,9 @@ const generateExcelFile = (phoneNumbers, screenshots) => {
   
   // Set column widths
   const columnWidths = [
-    { wch: 15 }, // Phone Number
-    { wch: 20 }, // Formatted Number
-    { wch: 12 }, // Country Code
-    { wch: 10 }, // Confidence
-    { wch: 8 },  // Valid
-    { wch: 30 }, // Context
-    { wch: 40 }, // Source URL
-    { wch: 30 }, // Page Title
-    { wch: 15 }, // Extracted Date
-    { wch: 10 }, // Position X
-    { wch: 10 }  // Position Y
+    { wch: 20 }, // Phone Number
+    { wch: 25 }, // Name
+    { wch: 30 }, // Email
   ];
   mainWorksheet['!cols'] = columnWidths;
   
@@ -99,16 +82,11 @@ const generateExcelFileToDisk = (phoneNumbers, screenshots, filePath) => {
 // Generate CSV format
 const generateCSV = (phoneNumbers, screenshots) => {
   const data = phoneNumbers.map(phone => {
-    const screenshot = screenshots.find(s => s._id.toString() === phone.screenshot.toString());
     return {
-      'Phone Number': phone.phoneNumber,
-      'Formatted Number': phone.formattedNumber,
-      'Country Code': phone.countryCode,
-      'Confidence': phone.confidence,
+      'Phone Number': phone.formattedNumber,
+      'Name': phone.name || 'N/A',
+      'Email': phone.email || 'N/A',
       'Valid': phone.isValid,
-      'Context': phone.context,
-      'Source URL': screenshot ? screenshot.url : 'N/A',
-      'Page Title': screenshot ? screenshot.title : 'N/A',
       'Extracted Date': new Date(phone.createdAt).toISOString()
     };
   });

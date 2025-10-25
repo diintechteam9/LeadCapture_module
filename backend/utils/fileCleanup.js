@@ -92,8 +92,44 @@ const cleanupOldFiles = async (uploadsDir, olderThanDays = 7) => {
   }
 };
 
+/**
+ * Clean up all files in uploads directory (use with caution)
+ * @param {string} uploadsDir - Path to uploads directory
+ * @returns {Promise<Object>} - Cleanup results
+ */
+const cleanupAllUploads = async (uploadsDir) => {
+  try {
+    const files = fs.readdirSync(uploadsDir);
+    const filesToDelete = [];
+
+    for (const file of files) {
+      const filePath = path.join(uploadsDir, file);
+      const stats = fs.statSync(filePath);
+      
+      if (stats.isFile()) {
+        filesToDelete.push({
+          path: filePath,
+          filename: file
+        });
+      }
+    }
+
+    if (filesToDelete.length > 0) {
+      console.log(`🧹 Cleaning up ${filesToDelete.length} files from uploads directory`);
+      return await cleanupFiles(filesToDelete);
+    } else {
+      console.log('✅ Uploads directory is already clean');
+      return { success: [], failed: [], total: 0 };
+    }
+  } catch (error) {
+    console.error('❌ Error cleaning up uploads directory:', error.message);
+    return { success: [], failed: [], total: 0 };
+  }
+};
+
 module.exports = {
   cleanupFile,
   cleanupFiles,
-  cleanupOldFiles
+  cleanupOldFiles,
+  cleanupAllUploads
 };
