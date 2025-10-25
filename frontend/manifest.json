@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Phone Number Extractor",
+  "version": "1.0.0",
+  "description": "Extract phone numbers from screenshots using OCR technology",
+  "icons": {
+    "16": "vite.svg",
+    "48": "vite.svg",
+    "128": "vite.svg"
+  },
+  "action": {
+    "default_popup": "index.html",
+    "default_title": "Phone Number Extractor",
+    "default_icon": {
+      "16": "vite.svg",
+      "48": "vite.svg",
+      "128": "vite.svg"
+    }
+  },
+  "permissions": [
+    "storage",
+    "tabs",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://leadcapture-module.onrender.com/*",
+    "http://localhost:4000/*"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  }
+}
