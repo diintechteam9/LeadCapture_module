@@ -24,20 +24,28 @@ const OCR_CONFIG = {
 export const extractTextFromImage = async (imageFile) => {
   try {
     console.log('Starting OCR processing...');
+    console.log('Image file:', imageFile.name, 'Size:', imageFile.size, 'Type:', imageFile.type);
     
-    const { data: { text } } = await Tesseract.recognize(
-      imageFile,
-      'eng', // English language
-      OCR_CONFIG
-    );
+    // Initialize Tesseract
+    const worker = await Tesseract.createWorker('eng');
     
-    console.log('OCR completed successfully');
-    console.log('Extracted text:', text);
-    
-    return text;
+    try {
+      const { data: { text } } = await worker.recognize(imageFile, OCR_CONFIG);
+      
+      await worker.terminate();
+      
+      console.log('OCR completed successfully');
+      console.log('Extracted text length:', text ? text.length : 0);
+      
+      return text || '';
+    } catch (workerError) {
+      await worker.terminate();
+      throw workerError;
+    }
   } catch (error) {
     console.error('OCR processing failed:', error);
-    throw new Error('Failed to extract text from image');
+    console.error('Error details:', error.message, error.stack);
+    throw new Error(`Failed to extract text from image: ${error.message}`);
   }
 };
 
@@ -50,11 +58,13 @@ export const extractTextFromImage = async (imageFile) => {
 export const extractTextWithProgress = async (imageFile, onProgress) => {
   try {
     console.log('Starting OCR processing with progress tracking...');
+    console.log('Image file:', imageFile.name, 'Size:', imageFile.size, 'Type:', imageFile.type);
     
-    const { data: { text } } = await Tesseract.recognize(
-      imageFile,
-      'eng',
-      {
+    // Initialize Tesseract
+    const worker = await Tesseract.createWorker('eng');
+    
+    try {
+      const { data: { text } } = await worker.recognize(imageFile, {
         ...OCR_CONFIG,
         logger: m => {
           if (m.status === 'recognizing text') {
@@ -65,16 +75,22 @@ export const extractTextWithProgress = async (imageFile, onProgress) => {
             }
           }
         }
-      }
-    );
-    
-    console.log('OCR completed successfully');
-    console.log('Extracted text:', text);
-    
-    return text;
+      });
+      
+      await worker.terminate();
+      
+      console.log('OCR completed successfully');
+      console.log('Extracted text length:', text ? text.length : 0);
+      
+      return text || '';
+    } catch (workerError) {
+      await worker.terminate();
+      throw workerError;
+    }
   } catch (error) {
     console.error('OCR processing failed:', error);
-    throw new Error('Failed to extract text from image');
+    console.error('Error details:', error.message, error.stack);
+    throw new Error(`Failed to extract text from image: ${error.message}`);
   }
 };
 

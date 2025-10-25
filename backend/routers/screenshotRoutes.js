@@ -5,6 +5,7 @@ const fs = require('fs');
 const {
   uploadScreenshot,
   processScreenshot,
+  processScreenshotWithOCR,
   getAllScreenshots,
   getScreenshot,
   deleteScreenshot,
@@ -51,6 +52,7 @@ const upload = multer({
 // Routes
 router.post('/upload', upload.single('screenshot'), uploadScreenshot);
 router.post('/:screenshotId/process', processScreenshot);
+router.post('/:screenshotId/process-image', upload.single('image'), processScreenshotWithOCR);
 router.get('/', getAllScreenshots);
 router.get('/stats', getScreenshotStats);
 router.get('/:screenshotId', getScreenshot);

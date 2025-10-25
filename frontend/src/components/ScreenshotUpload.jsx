@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { Upload, Camera, FileImage, X, CheckCircle, AlertCircle, Loader } from 'lucide-react';
+import { Upload, Camera, FileImage, X, Loader } from 'lucide-react';
 import { API_BASE_URL } from '../config';
-import { extractTextWithProgress } from '../services/ocrService';
 import toast from 'react-hot-toast';
 
 const ScreenshotUpload = ({ onUploadSuccess }) => {
@@ -68,22 +67,6 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
     }));
   };
 
-  const [ocrProgress, setOcrProgress] = useState(0);
-
-  const extractTextFromImage = async (imageFile) => {
-    try {
-      // Use Tesseract.js for real OCR processing
-      const extractedText = await extractTextWithProgress(imageFile, (progress) => {
-        setOcrProgress(progress);
-      });
-      
-      return extractedText;
-    } catch (error) {
-      console.error('OCR extraction failed:', error);
-      throw error;
-    }
-  };
-
   const handleUpload = async () => {
     if (!uploadedFile) {
       toast.error('Please select a file to upload');
@@ -92,6 +75,9 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
 
     try {
       setUploading(true);
+      setProcessing(true);
+      
+      toast.loading('Uploading screenshot...', { id: 'uploading' });
       
       const uploadFormData = new FormData();
       uploadFormData.append('screenshot', uploadedFile);
@@ -110,59 +96,16 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
       
       const response = await res.json();
       
-      toast.success('Screenshot uploaded successfully!');
+      toast.success('Screenshot uploaded successfully!', { id: 'uploading' });
+      
       setScreenshotId(response.data.id);
       
-      // Automatically process the screenshot
-      await handleProcessScreenshot(response.data.id);
-
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload screenshot');
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleProcessScreenshot = async (id) => {
-    if (!uploadedFile) {
-      toast.error('No file to process');
-      return;
-    }
-
-    try {
-      setProcessing(true);
-      setOcrProgress(0);
-      toast.loading('Extracting text from image...', { id: 'processing' });
-
-      // Extract text from the image using Tesseract.js
-      const extractedText = await extractTextFromImage(uploadedFile);
-      
-      toast.success(`Text extracted successfully! (${ocrProgress}%)`, { id: 'processing' });
-      toast.loading('Processing phone numbers...', { id: 'phone-processing' });
-
-      // Send extracted text to backend for phone number processing
-      const res = await fetch(`${API_BASE_URL}/api/screenshots/${id}/process`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ extractedText }),
-      });
-      
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || 'Failed to process screenshot');
-      }
-      
-      const response = await res.json();
-      
-      toast.success(`Found ${response.data.phoneNumbersFound} phone numbers!`, { id: 'phone-processing' });
+      // Backend automatically processes with OCR
+      toast.success('OCR processing started in the background. Phone numbers will be extracted automatically.');
       
       // Reset form
       setUploadedFile(null);
       setScreenshotId(null);
-      setOcrProgress(0);
       setFormData({ url: '', title: '' });
       
       if (fileInputRef.current) {
@@ -175,14 +118,15 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
       }
 
     } catch (error) {
-      console.error('Processing error:', error);
-      toast.error('Failed to process screenshot', { id: 'processing' });
-      toast.error('Failed to process screenshot', { id: 'phone-processing' });
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Failed to upload screenshot');
     } finally {
+      setUploading(false);
       setProcessing(false);
-      setOcrProgress(0);
     }
   };
+
+
 
   const removeFile = () => {
     setUploadedFile(null);
@@ -238,9 +182,6 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
               <div className="text-left">
                 <p className="font-medium text-gray-900">{uploadedFile.name}</p>
                 <p className="text-sm text-gray-500">{formatFileSize(uploadedFile.size)}</p>
-                {screenshotId && (
-                  <p className="text-xs text-blue-600">Ready for processing</p>
-                )}
               </div>
               <button
                 onClick={removeFile}
@@ -307,21 +248,7 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
         </div>
       </div>
 
-      {/* OCR Progress Indicator */}
-      {processing && ocrProgress > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">OCR Processing</span>
-            <span className="text-sm text-gray-500">{ocrProgress}%</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
-              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${ocrProgress}%` }}
-            ></div>
-          </div>
-        </div>
-      )}
+
 
       {/* Upload Button */}
       <div className="flex justify-center">
@@ -356,14 +283,13 @@ const ScreenshotUpload = ({ onUploadSuccess }) => {
       {/* Instructions */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex items-start space-x-3">
-          <AlertCircle className="h-5 w-5 text-blue-500 mt-0.5" />
           <div className="text-sm text-blue-800">
             <p className="font-medium mb-1">How it works:</p>
             <ol className="list-decimal list-inside space-y-1 text-blue-700">
               <li>Upload a screenshot containing phone numbers</li>
-              <li>Our system will automatically extract text from the image</li>
-              <li>Phone numbers will be detected and saved to the database</li>
-              <li>You can view and export the extracted data</li>
+              <li>The backend automatically extracts text using OCR</li>
+              <li>Phone numbers are detected and saved to the database</li>
+              <li>You can view and export the extracted phone numbers</li>
             </ol>
           </div>
         </div>

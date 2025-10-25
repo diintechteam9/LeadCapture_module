@@ -3,10 +3,11 @@ const PhoneNumber = require('../models/PhoneNumber');
 const { extractPhoneNumbers, calculateConfidence } = require('../utils/phoneExtractor');
 const { generateExcelBuffer } = require('../utils/excelGenerator');
 const { cleanupFile, cleanupOldFiles } = require('../utils/fileCleanup');
+const { extractTextFromImage } = require('../utils/ocrService');
 const path = require('path');
 const fs = require('fs');
 
-// Upload screenshot
+// Upload screenshot and automatically process with OCR
 const uploadScreenshot = async (req, res) => {
   try {
     if (!req.file) {
@@ -18,6 +19,7 @@ const uploadScreenshot = async (req, res) => {
 
     const { url, title } = req.body;
 
+    // Create screenshot record
     const screenshot = new Screenshot({
       filename: req.file.filename,
       originalName: req.file.originalname,
@@ -30,9 +32,14 @@ const uploadScreenshot = async (req, res) => {
 
     await screenshot.save();
 
+    // Automatically process with OCR in the background
+    processScreenshotWithOCR(screenshot._id.toString(), req.file.path).catch(err => {
+      console.error('Background OCR processing failed:', err);
+    });
+
     res.status(201).json({
       success: true,
-      message: 'Screenshot uploaded successfully',
+      message: 'Screenshot uploaded successfully. OCR processing started.',
       data: {
         id: screenshot._id,
         filename: screenshot.filename,
@@ -49,6 +56,83 @@ const uploadScreenshot = async (req, res) => {
       message: 'Error uploading screenshot',
       error: error.message
     });
+  }
+};
+
+// Helper function to process screenshot with OCR
+const processScreenshotWithOCR = async (screenshotId, imagePath) => {
+  try {
+    console.log('Starting OCR processing for screenshot:', screenshotId);
+    
+    // Extract text using OCR
+    const extractedText = await extractTextFromImage(imagePath);
+    
+    console.log('OCR completed. Extracted text length:', extractedText.length);
+    
+    if (!extractedText || extractedText.trim().length === 0) {
+      console.log('No text extracted from image');
+      return { phoneNumbersFound: 0 };
+    }
+
+    // Extract phone numbers from the text
+    const phoneNumbers = extractPhoneNumbers(extractedText);
+    
+    console.log('Found', phoneNumbers.length, 'potential phone numbers');
+
+    // Find the screenshot
+    const screenshot = await Screenshot.findById(screenshotId);
+    if (!screenshot) {
+      console.error('Screenshot not found:', screenshotId);
+      return { phoneNumbersFound: 0 };
+    }
+
+    // Save phone numbers to database
+    const savedPhoneNumbers = [];
+    
+    for (const phoneData of phoneNumbers) {
+      const confidence = calculateConfidence(phoneData.cleaned, extractedText);
+      
+      const phoneNumber = new PhoneNumber({
+        screenshot: screenshotId,
+        phoneNumber: phoneData.cleaned,
+        formattedNumber: phoneData.formatted,
+        countryCode: phoneData.countryCode,
+        confidence: confidence,
+        context: extractedText.substring(
+          Math.max(0, extractedText.indexOf(phoneData.original) - 50),
+          Math.min(extractedText.length, extractedText.indexOf(phoneData.original) + phoneData.original.length + 50)
+        ),
+        isValid: phoneData.isValid
+      });
+
+      const savedPhone = await phoneNumber.save();
+      savedPhoneNumbers.push(savedPhone);
+    }
+
+    // Update screenshot as processed
+    screenshot.processed = true;
+    screenshot.phoneNumbers = savedPhoneNumbers.map(p => p._id);
+    await screenshot.save();
+
+    console.log('Successfully saved', savedPhoneNumbers.length, 'phone numbers');
+
+    // Clean up the uploaded file after successful processing
+    const cleanupSuccess = await cleanupFile(screenshot.filePath, screenshot.filename);
+    
+    // Update screenshot record to indicate file has been cleaned up
+    if (cleanupSuccess) {
+      screenshot.fileCleaned = true;
+      await screenshot.save();
+    }
+
+    return {
+      phoneNumbersFound: savedPhoneNumbers.length,
+      fileCleaned: cleanupSuccess
+    };
+
+  } catch (error) {
+    console.error('OCR processing error:', error);
+    throw error;
   }
 };
 
@@ -328,6 +412,7 @@ const cleanupOldUploads = async (req, res) => {
 module.exports = {
   uploadScreenshot,
   processScreenshot,
+  processScreenshotWithOCR,
   getAllScreenshots,
   getScreenshot,
   deleteScreenshot,
